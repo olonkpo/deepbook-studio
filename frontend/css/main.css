@@ -1,0 +1,115 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   DeepBook Studio — Main Stylesheet
+   Phase 1: Base styles + splash screen.
+   Full UI styles added in Phase 3 (frontend migration).
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── CSS Variables (Design Tokens) ────────────────────────────────────────── */
+:root {
+  --color-bg:          #1a1a2e;
+  --color-surface:     #16213e;
+  --color-surface-2:   #0f3460;
+  --color-primary:     #1F3A6E;
+  --color-accent:      #2E6DA4;
+  --color-accent-light:#5B9BD5;
+  --color-text:        #e0e0e0;
+  --color-text-muted:  #888888;
+  --color-border:      #2a2a4a;
+  --color-success:     #4caf50;
+  --color-error:       #f44336;
+  --color-warning:     #ff9800;
+
+  --font-sans:   'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:   'Courier New', Courier, monospace;
+
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.5);
+
+  --transition:  200ms ease;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Splash Screen ─────────────────────────────────────────────────────────── */
+.splash {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.splash__logo {
+  margin-bottom: 8px;
+  animation: fadeInDown 0.5s ease both;
+}
+
+.splash__title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  animation: fadeInDown 0.5s ease 0.1s both;
+}
+
+.splash__subtitle {
+  font-size: 1rem;
+  color: var(--color-accent-light);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  animation: fadeInDown 0.5s ease 0.2s both;
+}
+
+.splash__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent-light);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite, fadeIn 0.5s ease 0.3s both;
+  margin-top: 8px;
+}
+
+.splash__status {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  animation: fadeIn 0.5s ease 0.4s both;
+}
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

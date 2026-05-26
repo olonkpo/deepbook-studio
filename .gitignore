@@ -1,0 +1,58 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+.npm/
+
+# ─── Environment & Secrets ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# NEVER commit API keys. Use .env.example as the template.
+
+# ─── Build Output ────────────────────────────────────────────────────────────
+dist/
+out/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+*.snap
+
+# ─── Database ────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── OS Files ────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ─── Editor ──────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Electron ────────────────────────────────────────────────────────────────
+# electron-builder temp files
+.electron-builder.env
+build/icons/temp/
+
+# ─── Misc ────────────────────────────────────────────────────────────────────
+*.map
+coverage/
+.nyc_output/

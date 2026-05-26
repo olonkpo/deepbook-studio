@@ -1,0 +1,35 @@
+{
+  "name": "deepbook-studio",
+  "version": "1.0.0",
+  "description": "AI-powered book writing and generation desktop app",
+  "main": "electron/main.js",
+  "author": "DeepBook Studio",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run dev:backend\" \"npm run dev:electron\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:electron": "wait-on http://localhost:3001/api/health && electron . --dev",
+    "build": "npm run build:backend && electron-builder",
+    "build:backend": "echo 'Backend has no build step — Node.js runs directly'",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "lint": "eslint \"**/*.js\" --ignore-path .eslintignore",
+    "lint:fix": "eslint \"**/*.js\" --ignore-path .eslintignore --fix",
+    "format": "prettier --write \"**/*.{js,json,css,html,md}\" --ignore-path .prettierignore",
+    "test": "echo \"Tests run here — add your test runner in Phase 2\"",
+    "postinstall": "cd backend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-reload": "^2.0.0-alpha.1",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

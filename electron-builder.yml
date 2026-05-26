@@ -1,0 +1,79 @@
+appId: com.deepbook.studio
+productName: DeepBook Studio
+copyright: Copyright © 2026 DeepBook Studio
+
+# What to include in the app package
+files:
+  - frontend/**/*
+  - electron/**/*
+  - backend/**/*
+  - node_modules/**/*
+  - package.json
+  - "!backend/node_modules/.cache/**/*"
+  - "!**/*.map"
+  - "!**/test/**/*"
+  - "!**/tests/**/*"
+  - "!**/*.test.js"
+
+# Extra resources bundled alongside the app
+extraResources:
+  - from: backend
+    to: backend
+    filter:
+      - "**/*"
+      - "!node_modules/.cache"
+
+directories:
+  output: dist
+  buildResources: build
+
+# macOS
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  # No code signing for v1.0.0 — add after obtaining Apple Developer account
+  identity: null
+  hardenedRuntime: false
+
+dmg:
+  title: "DeepBook Studio ${version}"
+  background: null
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# Windows
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeader: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DeepBook Studio
+
+# Publish to GitHub Releases (used by GitHub Actions)
+publish:
+  provider: github
+  releaseType: release
