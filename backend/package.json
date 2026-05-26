@@ -11,11 +11,11 @@
   "dependencies": {
     "better-sqlite3": "^9.4.3",
     "cors": "^2.8.5",
+    "docx": "^8.5.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "keytar": "^7.9.0",
-    "node-fetch": "^3.3.2",
-    "openai": "^4.47.1"
+    "openai": "^4.47.1",
+    "pdfkit": "^0.15.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
