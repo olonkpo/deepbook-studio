@@ -6,15 +6,12 @@
 
 require('dotenv').config();
 
-// Restore persisted DeepSeek key from DB on startup
-(function restoreApiKey() {
+// Restore all persisted provider API keys from DB into process.env on startup
+(function restoreApiKeys() {
   try {
-    const { getDb } = require('./db/database');
-    const row = getDb().prepare("SELECT value FROM global_settings WHERE key = 'deepseek_api_key'").get();
-    if (row?.value && !process.env.DEEPSEEK_API_KEY) {
-      process.env.DEEPSEEK_API_KEY = row.value;
-      console.log('[Server] DeepSeek API key restored from DB.');
-    }
+    const { getDb }          = require('./db/database');
+    const { restoreAllApiKeys } = require('./routes/settings');
+    restoreAllApiKeys(getDb());
   } catch (_) { /* DB may not exist on very first cold start */ }
 })();
 

@@ -39,6 +39,9 @@ async function openProject(id) {
     APP.dashInterval = null;
   }
 
+  // Sync db.js active workspace so all DB calls resolve to the right project
+  DB.setActiveWorkspaceId(id);
+
   // Persist last-opened project for session restore
   DB.setSetting('lastProjectId', id).catch(() => {});
 

@@ -118,6 +118,9 @@ app.whenReady().then(async () => {
   const { buildMenu } = require('./menu');
   buildMenu();
 
+  // Pass Electron's user-data path to the backend so SQLite lands in the right folder
+  process.env.APPDATA_PATH = app.getPath('userData');
+
   // Start backend then open window
   startBackend();
 

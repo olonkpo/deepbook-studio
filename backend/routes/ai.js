@@ -1,10 +1,10 @@
 /**
  * backend/routes/ai.js
- * AI generation — DeepSeek (default) with Ollama fallback.
+ * AI generation — all providers routed through aiService.
  * POST /api/ai/generate  — non-streaming (returns {text})
  * POST /api/ai/stream    — SSE streaming
- * GET  /api/ai/providers — provider status
- * POST /api/ai/provider  — switch provider
+ * GET  /api/ai/providers — all provider statuses
+ * POST /api/ai/provider  — switch active provider
  * GET  /api/ai/history   — recent generation log
  */
 
@@ -118,27 +118,21 @@ router.post('/outline', async (req, res) => {
 // ── GET /api/ai/providers ─────────────────────────────────────────────────────
 router.get('/providers', async (req, res) => {
   try {
-    const db          = getDb();
-    const workspace   = getActiveWorkspace(db);
-    const deepseekKey = process.env.DEEPSEEK_API_KEY;
+    const db           = getDb();
+    const workspace    = getActiveWorkspace(db);
     const ollamaStatus = await ollamaService.checkStatus();
+    const apiProviders = aiService.getProviderStatus();
 
     res.json({
       current: workspace?.ai_provider || 'auto',
-      hasDeepseekKey: !!deepseekKey,
       providers: {
-        deepseek: {
-          available: !!deepseekKey,
-          hasKey: !!deepseekKey,
-          model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-          label: 'DeepSeek',
-        },
+        ...apiProviders,
         ollama: {
           available: ollamaStatus.running,
-          running: ollamaStatus.running,
-          models: ollamaStatus.models || [],
-          model: process.env.OLLAMA_DEFAULT_MODEL || 'llama3',
-          label: 'Ollama (local)',
+          running:   ollamaStatus.running,
+          models:    ollamaStatus.models || [],
+          model:     process.env.OLLAMA_DEFAULT_MODEL || 'llama3',
+          label:     'Ollama (local)',
         },
       },
     });
@@ -148,10 +142,11 @@ router.get('/providers', async (req, res) => {
 });
 
 // ── POST /api/ai/provider ─────────────────────────────────────────────────────
+const VALID_PROVIDERS = ['deepseek', 'openai', 'openrouter', 'claude', 'gemini', 'ollama', 'auto'];
 router.post('/provider', (req, res) => {
   const { provider } = req.body;
-  if (!['deepseek', 'ollama', 'auto'].includes(provider)) {
-    return res.status(400).json({ error: 'provider must be deepseek, ollama, or auto.' });
+  if (!VALID_PROVIDERS.includes(provider)) {
+    return res.status(400).json({ error: `provider must be one of: ${VALID_PROVIDERS.join(', ')}` });
   }
   try {
     const db = getDb();

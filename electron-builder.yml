@@ -15,14 +15,6 @@ files:
   - "!**/tests/**/*"
   - "!**/*.test.js"
 
-# Extra resources bundled alongside the app
-extraResources:
-  - from: backend
-    to: backend
-    filter:
-      - "**/*"
-      - "!node_modules/.cache"
-
 directories:
   output: dist
   buildResources: build

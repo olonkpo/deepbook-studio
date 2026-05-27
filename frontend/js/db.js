@@ -132,7 +132,17 @@ const _storeHandlers = {
         status:      obj.status || 'planning',
         word_count:  obj.wordCount || obj.word_count || 0,
       };
-      const result = await api.books.create(wid, payload);
+      // Try update first (book already exists), fall back to create
+      let result;
+      if (obj.id) {
+        try {
+          result = await api.books.update(obj.id, payload);
+        } catch (_) {
+          result = await api.books.create(wid, payload);
+        }
+      } else {
+        result = await api.books.create(wid, payload);
+      }
       _cache.del(`books:${obj.id}`);
       _cache.clearPrefix(`books:all`);
       _cache.clearPrefix(`books:by_project:${wid}`);

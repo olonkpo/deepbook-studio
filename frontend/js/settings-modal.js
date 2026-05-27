@@ -14,12 +14,13 @@ async function openSettings() {
   const project = APP.currentProjectId ? await DB.get('projects', APP.currentProjectId) : null;
   const ps      = project?.settings || {};
 
-  // Load current AI settings from backend
+  // Load current AI settings from backend.
+  // getAll() returns a plain object { aiProvider: '...', aiModel: '...', ... }
   let currentProvider = '', currentModel = '';
   try {
     const allSettings = await api.settings.getAll();
-    currentProvider = allSettings.find(s => s.key === 'aiProvider')?.value || '';
-    currentModel    = allSettings.find(s => s.key === 'aiModel')?.value    || '';
+    currentProvider = allSettings.aiProvider || '';
+    currentModel    = allSettings.aiModel    || '';
   } catch (_) { /* backend may not have them set yet */ }
 
   document.getElementById('settingsBody').innerHTML = `
