@@ -1,125 +1,99 @@
 /**
  * backend/routes/settings.js
- * Per-workspace settings + AI key management + Ollama status.
+ * Global settings key-value store + AI key management + Ollama status.
  */
 
+'use strict';
+
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const { getDb } = require('../db/database');
 const ollamaService = require('../services/ollamaService');
 
-// Helper: get active workspace
-function getActiveWorkspace(db) {
-  return db.prepare('SELECT * FROM workspaces WHERE is_active = 1 LIMIT 1').get();
-}
-
-// Helper: upsert a setting key
-function upsertSetting(db, workspaceId, key, value) {
-  db.prepare(`
-    INSERT INTO settings (workspace_id, key, value)
-    VALUES (?, ?, ?)
-    ON CONFLICT(workspace_id, key) DO UPDATE SET value = excluded.value
-  `).run(workspaceId, key, value);
-}
-
-// GET /api/settings — get all settings for active workspace
+// ── GET /api/settings  ────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
   try {
-    const db = getDb();
-    const workspace = getActiveWorkspace(db);
-    if (!workspace) return res.status(400).json({ error: 'No active workspace.' });
+    const db   = getDb();
+    const rows = db.prepare('SELECT key, value FROM global_settings').all();
+    const out  = Object.fromEntries(rows.map(r => [r.key, tryParseValue(r.value)]));
 
-    const rows = db.prepare('SELECT key, value FROM settings WHERE workspace_id = ?').all(workspace.id);
-    const settings = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    // Add live AI status (never expose raw key)
+    out.has_deepseek_key  = !!process.env.DEEPSEEK_API_KEY;
+    out.deepseek_model    = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+    out.ollama_base_url   = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+    out.ollama_model      = process.env.OLLAMA_DEFAULT_MODEL || 'llama3';
 
-    // Include workspace-level fields
-    settings.ai_provider  = workspace.ai_provider;
-    settings.export_path  = workspace.export_path;
-    settings.workspace_id = workspace.id;
-
-    // Never expose raw API keys — only whether they exist
-    settings.has_deepseek_key = !!(process.env.DEEPSEEK_API_KEY || settings.deepseek_key);
-    delete settings.deepseek_key;
-
-    res.json(settings);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.json(out);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/settings — update settings for active workspace
-router.put('/', (req, res) => {
-  const allowedKeys = [
-    'theme', 'font_size', 'editor_width', 'autosave_interval',
-    'default_genre', 'default_tone', 'default_max_tokens',
-    'ollama_model', 'show_word_count', 'export_include_cover',
-  ];
+// ── GET /api/settings/:key ────────────────────────────────────────────────────
+router.get('/:key', (req, res) => {
+  try {
+    const db  = getDb();
+    const row = db.prepare('SELECT value FROM global_settings WHERE key = ?').get(req.params.key);
+    if (!row) return res.json({ value: null });
+    res.json({ value: tryParseValue(row.value) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
+// ── PUT /api/settings  — batch upsert key-value pairs ────────────────────────
+router.put('/', (req, res) => {
+  try {
+    const db  = getDb();
+    const ins = db.prepare('INSERT OR REPLACE INTO global_settings (key, value) VALUES (?, ?)');
+    const batch = db.transaction(pairs => pairs.forEach(([k, v]) => ins.run(k, stringify(v))));
+    const pairs = Object.entries(req.body).filter(([k]) => k !== 'has_deepseek_key');
+    batch(pairs);
+    res.json({ saved: pairs.length });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── PUT /api/settings/:key ────────────────────────────────────────────────────
+router.put('/:key', (req, res) => {
   try {
     const db = getDb();
-    const workspace = getActiveWorkspace(db);
-    if (!workspace) return res.status(400).json({ error: 'No active workspace.' });
-
-    // Update workspace-level fields
-    if (req.body.ai_provider !== undefined) {
-      db.prepare('UPDATE workspaces SET ai_provider = ? WHERE id = ?')
-        .run(req.body.ai_provider, workspace.id);
-    }
-    if (req.body.export_path !== undefined) {
-      db.prepare('UPDATE workspaces SET export_path = ? WHERE id = ?')
-        .run(req.body.export_path, workspace.id);
-    }
-
-    // Update settings table
-    for (const key of allowedKeys) {
-      if (req.body[key] !== undefined) {
-        upsertSetting(db, workspace.id, key, String(req.body[key]));
-      }
-    }
-
-    res.json({ success: true, message: 'Settings updated.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    db.prepare('INSERT OR REPLACE INTO global_settings (key, value) VALUES (?, ?)').run(req.params.key, stringify(req.body.value));
+    res.json({ saved: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// POST /api/settings/keys — save API key
-// Stores the key in the process environment (session) and in the settings table.
-// For production: the Electron main process can write to the OS keychain.
+// ── POST /api/settings/keys — save DeepSeek API key ──────────────────────────
 router.post('/keys', (req, res) => {
   const { provider, key } = req.body;
-  if (!provider || !key) {
+  if (!provider || !key?.trim()) {
     return res.status(400).json({ error: 'provider and key are required.' });
   }
-  if (!['deepseek'].includes(provider)) {
-    return res.status(400).json({ error: 'Unsupported provider. Only deepseek supported via this endpoint.' });
+  if (provider !== 'deepseek') {
+    return res.status(400).json({ error: 'Only deepseek is supported via this endpoint.' });
   }
-
   try {
+    // Set immediately in process.env so aiService picks it up
+    process.env.DEEPSEEK_API_KEY = key.trim();
+    // Persist across restarts in DB (plaintext — Phase 2 acceptable)
     const db = getDb();
-    const workspace = getActiveWorkspace(db);
-    if (!workspace) return res.status(400).json({ error: 'No active workspace.' });
-
-    // Set in process.env for immediate use
-    process.env.DEEPSEEK_API_KEY = key;
-
-    // Persist in settings table (encrypted storage is a Phase 5 enhancement)
-    upsertSetting(db, workspace.id, `${provider}_key`, key);
-
-    res.json({ success: true, message: `${provider} API key saved.` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    db.prepare('INSERT OR REPLACE INTO global_settings (key, value) VALUES (?, ?)').run('deepseek_api_key', key.trim());
+    res.json({ success: true, message: 'DeepSeek API key saved.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/settings/ollama — check if Ollama is running and list models
+// ── GET /api/settings/ollama — Ollama health check ───────────────────────────
 router.get('/ollama', async (req, res) => {
   try {
     const status = await ollamaService.checkStatus();
     res.json(status);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function tryParseValue(v) {
+  if (v == null) return null;
+  try { return JSON.parse(v); } catch { return v; }
+}
+function stringify(v) {
+  if (v == null) return null;
+  if (typeof v === 'string') return v;
+  return JSON.stringify(v);
+}
 
 module.exports = router;

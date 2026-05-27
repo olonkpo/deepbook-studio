@@ -1,34 +1,193 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';" />
+    content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com;" />
   <title>DeepBook Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Lora:wght@400;600&family=Fira+Code&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
 </head>
 <body>
-  <div id="app">
-    <div class="splash">
-      <div class="splash__logo">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="64" height="64" rx="12" fill="#1F3A6E"/>
-          <path d="M16 20h32M16 28h24M16 36h28M16 44h20" stroke="#5B9BD5" stroke-width="3"
-            stroke-linecap="round"/>
-          <circle cx="48" cy="44" r="8" fill="#2E6DA4"/>
-          <path d="M45 44l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round"/>
-        </svg>
+
+<!-- ═══ LOADING SCREEN ═══ -->
+<div id="loadingScreen">
+  <h1>📚 DeepBook Studio</h1>
+  <div class="spinner"></div>
+  <p id="loadingStatus">Connecting to backend…</p>
+</div>
+
+<!-- ═══ HOME VIEW ═══ -->
+<div id="homeView">
+  <div class="home-split">
+    <div class="home-brand">
+      <div class="home-brand-logo">📚</div>
+      <div class="home-brand-title">DeepBook<br>Studio</div>
+      <div class="home-brand-sub">AI Book Writing Engine</div>
+      <div class="home-brand-tag">v4.1 · Autonomous Engine</div>
+    </div>
+    <div class="home-right">
+      <div class="home-right-body" id="homeRightBody"></div>
+      <div class="home-bottom-bar">
+        <button class="home-open-btn" onclick="triggerImportFile()">Open an existing file</button>
+        <input type="file" id="homeImportInput" accept=".json" style="display:none" onchange="handleHomeImport(this)">
+        <button class="home-choose-btn" onclick="openNewProjectModal()">New Project</button>
       </div>
-      <h1 class="splash__title">DeepBook Studio</h1>
-      <p class="splash__subtitle">AI-Powered Book Writing</p>
-      <div class="splash__spinner" aria-label="Loading..."></div>
-      <p class="splash__status" id="status">Connecting to backend...</p>
     </div>
   </div>
+</div>
 
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+<!-- ═══ WORKSPACE VIEW ═══ -->
+<div id="workspaceView">
+  <!-- Header -->
+  <div class="app-header">
+    <button class="hdr-btn" onclick="goHome()">← Projects</button>
+    <h1 id="headerTitle">DeepBook Studio</h1>
+    <div class="header-worker idle" id="headerWorker">
+      <div class="wdot"></div>
+      <span id="headerWorkerText">Idle</span>
+    </div>
+    <div class="provider-status offline" id="providerStatus" title="AI provider status">
+      <div class="ps-dot"></div>
+      <span id="providerStatusText">Checking AI…</span>
+    </div>
+    <button class="hdr-btn" onclick="openSettings()">⚙ Settings</button>
+    <button class="hdr-btn" id="themeToggleBtn" onclick="cycleTheme()">🌙</button>
+  </div>
+
+  <!-- Worker progress bar -->
+  <div id="workerBar" class="worker-bar hidden">
+    <span id="workerBarText">Generating…</span>
+    <div class="wb-progress">
+      <div class="wb-progress-fill" id="workerBarFill" style="width:0%"></div>
+    </div>
+    <button class="wb-stop-btn" onclick="stopGeneration()">Stop</button>
+  </div>
+
+  <!-- Body: sidebar + main content -->
+  <div class="ws-body">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-back" onclick="goHome()">← All Projects</div>
+      <div class="sidebar-project">
+        <h3 id="sidebarProjectTitle">Project</h3>
+        <div class="sp-genre" id="sidebarProjectGenre"></div>
+      </div>
+
+      <div class="sidebar-section toggle-section" onclick="toggleSidebarGroup('wgWorkflow')">
+        Workflow <span class="toggle-icon">▼</span>
+      </div>
+      <div class="sidebar-group" id="wgWorkflow">
+        <button class="step-btn" data-step="0" onclick="goStep(0)"><span class="step-dot"></span>DNA &amp; Settings</button>
+        <button class="step-btn" data-step="1" onclick="goStep(1)"><span class="step-dot"></span>Series Plan</button>
+        <button class="step-btn" data-step="2" onclick="goStep(2)"><span class="step-dot"></span>Roadmaps</button>
+        <button class="step-btn" data-step="3" onclick="goStep(3)"><span class="step-dot"></span>Chapters</button>
+        <button class="step-btn" data-step="4" onclick="goStep(4)"><span class="step-dot"></span>Front Matter</button>
+      </div>
+
+      <div class="sidebar-section toggle-section" onclick="toggleSidebarGroup('wgWorld')">
+        World <span class="toggle-icon">▼</span>
+      </div>
+      <div class="sidebar-group" id="wgWorld">
+        <button class="step-btn" data-step="8" onclick="goStep(8)"><span class="step-dot"></span>Codex</button>
+      </div>
+
+      <div class="sidebar-section toggle-section" onclick="toggleSidebarGroup('wgProject')">
+        Project <span class="toggle-icon">▼</span>
+      </div>
+      <div class="sidebar-group" id="wgProject">
+        <button class="step-btn" data-step="5" onclick="goStep(5)"><span class="step-dot"></span>Polish &amp; Export</button>
+        <button class="step-btn" data-step="6" onclick="goStep(6)"><span class="step-dot"></span>Dashboard</button>
+        <button class="step-btn" data-step="7" onclick="goStep(7)"><span class="step-dot"></span>Continuity Log</button>
+        <button class="step-btn" data-step="9" onclick="goStep(9)"><span class="step-dot"></span>AI Chat</button>
+      </div>
+    </div>
+
+    <!-- Main step content rendered here -->
+    <div class="ws-content" id="wsContent"></div>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Settings modal -->
+<div class="modal-overlay hidden" id="settingsModal">
+  <div class="modal" style="max-width:560px">
+    <h2>⚙ Settings</h2>
+    <div id="settingsBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- New project modal -->
+<div class="modal-overlay hidden" id="newProjectModal">
+  <div class="modal">
+    <h2>📚 New Project</h2>
+    <div id="newProjectBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('newProjectModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic confirm modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <h2 id="confirmTitle">Confirm</h2>
+    <p id="confirmMsg" style="margin-bottom:16px;color:var(--text-muted)"></p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-red" id="confirmOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chapter editor modal -->
+<div class="modal-overlay hidden" id="chapterModal">
+  <div class="modal" style="max-width:760px">
+    <h2 id="chapterModalTitle">Chapter</h2>
+    <div id="chapterModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('chapterModal')">Close</button>
+      <button class="btn btn-primary" id="chapterModalSaveBtn" onclick="saveChapterFromModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Codex entry modal -->
+<div class="modal-overlay hidden" id="codexModal">
+  <div class="modal" style="max-width:540px">
+    <h2 id="codexModalTitle">Codex Entry</h2>
+    <div id="codexModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('codexModal')">Cancel</button>
+      <button class="btn btn-primary" id="codexModalSaveBtn" onclick="saveCodexEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<!-- ═══ SCRIPTS — load in dependency order ═══ -->
+<script src="js/api.js"></script>
+<script src="js/db.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/continuity.js"></script>
+<script src="js/prompts.js"></script>
+<script src="js/orchestrator.js"></script>
+<script src="js/export.js"></script>
+<script src="js/settings-modal.js"></script>
+<script src="js/home.js"></script>
+<script src="js/steps.js"></script>
+<script src="js/app.js"></script>
+
 </body>
 </html>

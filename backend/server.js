@@ -6,6 +6,18 @@
 
 require('dotenv').config();
 
+// Restore persisted DeepSeek key from DB on startup
+(function restoreApiKey() {
+  try {
+    const { getDb } = require('./db/database');
+    const row = getDb().prepare("SELECT value FROM global_settings WHERE key = 'deepseek_api_key'").get();
+    if (row?.value && !process.env.DEEPSEEK_API_KEY) {
+      process.env.DEEPSEEK_API_KEY = row.value;
+      console.log('[Server] DeepSeek API key restored from DB.');
+    }
+  } catch (_) { /* DB may not exist on very first cold start */ }
+})();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -15,7 +27,7 @@ const PORT = process.env.PORT || 3001;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({ origin: `http://localhost:${PORT}` }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ── Serve frontend static files ───────────────────────────────────────────────
@@ -30,6 +42,7 @@ app.get('/api/health', (_req, res) => {
 const workspacesRouter = require('./routes/workspaces');
 const booksRouter      = require('./routes/books');
 const chaptersRouter   = require('./routes/chapters');
+const continuityRouter = require('./routes/continuity');
 const aiRouter         = require('./routes/ai');
 const exportRouter     = require('./routes/export');
 const settingsRouter   = require('./routes/settings');
@@ -43,8 +56,11 @@ app.get('/api/books/:id',    booksRouter.getBookById);
 app.put('/api/books/:id',    booksRouter.updateBook);
 app.delete('/api/books/:id', booksRouter.deleteBook);
 
-// Chapters — mounted at root level (routes define their own full paths)
+// Chapters — routes define their own full paths
 app.use('/api', chaptersRouter);
+
+// Continuity facts, codex entries, chat conversations + messages
+app.use('/api', continuityRouter);
 
 // AI
 app.use('/api/ai', aiRouter);

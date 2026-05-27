@@ -1,84 +1,114 @@
 /**
  * frontend/js/api.js
- * Centralised API client — all fetch() calls to the backend go through here.
- * Phase 1: Base setup with health check.
- * Phase 3: Full API methods added here during frontend migration.
+ * Centralised REST API client — all fetch() calls to the backend go through here.
  */
+'use strict';
 
 const API_BASE = 'http://localhost:3001/api';
 
 const api = {
-  // ── Internal fetch wrapper ──────────────────────────────────────────────
+  // ── Internal fetch wrapper ─────────────────────────────────────────────────
   async _request(method, path, body = null) {
-    const options = {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-    };
-    if (body) options.body = JSON.stringify(body);
-
+    const options = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== null) options.body = JSON.stringify(body);
     const response = await fetch(`${API_BASE}${path}`, options);
-
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `HTTP ${response.status}`);
     }
-
     return response.json();
   },
 
-  get:    (path)        => api._request('GET',    path),
-  post:   (path, body)  => api._request('POST',   path, body),
-  put:    (path, body)  => api._request('PUT',    path, body),
-  delete: (path)        => api._request('DELETE', path),
+  get:    (path)       => api._request('GET',    path),
+  post:   (path, body) => api._request('POST',   path, body),
+  put:    (path, body) => api._request('PUT',    path, body),
+  delete: (path)       => api._request('DELETE', path),
 
-  // ── Health ──────────────────────────────────────────────────────────────
+  // ── Health ─────────────────────────────────────────────────────────────────
   health: () => api.get('/health'),
 
-  // ── Workspaces ──────────────────────────────────────────────────────────
-  // Implemented in Phase 3
+  // ── Workspaces ─────────────────────────────────────────────────────────────
   workspaces: {
-    list:    ()         => api.get('/workspaces'),
-    create:  (data)     => api.post('/workspaces', data),
-    get:     (id)       => api.get(`/workspaces/${id}`),
-    update:  (id, data) => api.put(`/workspaces/${id}`, data),
-    delete:  (id)       => api.delete(`/workspaces/${id}`),
-    switch:  (id)       => api.post(`/workspaces/${id}/switch`),
+    list:   ()         => api.get('/workspaces'),
+    create: (data)     => api.post('/workspaces', data),
+    get:    (id)       => api.get(`/workspaces/${id}`),
+    update: (id, data) => api.put(`/workspaces/${id}`, data),
+    delete: (id)       => api.delete(`/workspaces/${id}`),
+    switch: (id)       => api.post(`/workspaces/${id}/switch`),
   },
 
-  // ── Books ───────────────────────────────────────────────────────────────
+  // ── Books ──────────────────────────────────────────────────────────────────
   books: {
-    list:    (workspaceId) => api.get(`/workspaces/${workspaceId}/books`),
-    create:  (workspaceId, data) => api.post(`/workspaces/${workspaceId}/books`, data),
-    get:     (id)       => api.get(`/books/${id}`),
-    update:  (id, data) => api.put(`/books/${id}`, data),
-    delete:  (id)       => api.delete(`/books/${id}`),
+    list:   (wid)       => api.get(`/workspaces/${wid}/books`),
+    create: (wid, data) => api.post(`/workspaces/${wid}/books`, data),
+    get:    (id)        => api.get(`/books/${id}`),
+    update: (id, data)  => api.put(`/books/${id}`, data),
+    delete: (id)        => api.delete(`/books/${id}`),
   },
 
-  // ── AI Generation ───────────────────────────────────────────────────────
+  // ── Chapters ───────────────────────────────────────────────────────────────
+  chapters: {
+    listByBook:      (bookId) => api.get(`/books/${bookId}/chapters`),
+    listByWorkspace: (wid)    => api.get(`/workspaces/${wid}/chapters`),
+    create:  (bookId, data)   => api.post(`/books/${bookId}/chapters`, data),
+    get:     (id)             => api.get(`/chapters/${id}`),
+    update:  (id, data)       => api.put(`/chapters/${id}`, data),
+    delete:  (id)             => api.delete(`/chapters/${id}`),
+    reorder: (bookId, order)  => api.post(`/books/${bookId}/chapters/reorder`, { order }),
+  },
+
+  // ── Continuity Facts ───────────────────────────────────────────────────────
+  continuity: {
+    list:       (wid)         => api.get(`/workspaces/${wid}/continuity`),
+    create:     (wid, data)   => api.post(`/workspaces/${wid}/continuity`, data),
+    batch:      (wid, facts)  => api.post(`/workspaces/${wid}/continuity/batch`, { facts }),
+    deleteAll:  (wid)         => api.delete(`/workspaces/${wid}/continuity`),
+  },
+
+  // ── Codex ──────────────────────────────────────────────────────────────────
+  codex: {
+    list:   (wid, type)  => api.get(`/workspaces/${wid}/codex${type ? '?type=' + type : ''}`),
+    create: (wid, data)  => api.post(`/workspaces/${wid}/codex`, data),
+    update: (id, data)   => api.put(`/codex/${id}`, data),
+    delete: (id)         => api.delete(`/codex/${id}`),
+  },
+
+  // ── Chat ───────────────────────────────────────────────────────────────────
+  chat: {
+    listConversations:   (wid)       => api.get(`/workspaces/${wid}/conversations`),
+    createConversation:  (wid, data) => api.post(`/workspaces/${wid}/conversations`, data),
+    getConversation:     (id)        => api.get(`/conversations/${id}`),
+    updateConversation:  (id, data)  => api.put(`/conversations/${id}`, data),
+    deleteConversation:  (id)        => api.delete(`/conversations/${id}`),
+    getMessages:         (convId)    => api.get(`/conversations/${convId}/messages`),
+    addMessage:          (convId, data) => api.post(`/conversations/${convId}/messages`, data),
+  },
+
+  // ── AI ─────────────────────────────────────────────────────────────────────
   ai: {
-    generate:  (data) => api.post('/ai/generate', data),
-    outline:   (data) => api.post('/ai/outline', data),
-    rewrite:   (data) => api.post('/ai/rewrite', data),
-    continue:  (data) => api.post('/ai/continue', data),
-    providers: ()     => api.get('/ai/providers'),
+    generate:    (data) => api.post('/ai/generate', data),
+    outline:     (data) => api.post('/ai/outline', data),
+    providers:   ()     => api.get('/ai/providers'),
     setProvider: (data) => api.post('/ai/provider', data),
+    history:     (limit) => api.get(`/ai/history${limit ? '?limit=' + limit : ''}`),
   },
 
-  // ── Export ──────────────────────────────────────────────────────────────
+  // ── Settings ───────────────────────────────────────────────────────────────
+  settings: {
+    getAll:     ()              => api.get('/settings'),
+    get:        (key)           => api.get(`/settings/${key}`),
+    updateAll:  (data)          => api.put('/settings', data),
+    update:     (key, value)    => api.put(`/settings/${key}`, { value }),
+    saveKey:    (provider, key) => api.post('/settings/keys', { provider, key }),
+    ollamaStatus: ()            => api.get('/settings/ollama'),
+  },
+
+  // ── Export ─────────────────────────────────────────────────────────────────
   export: {
     docx: (data) => api.post('/export/docx', data),
-    pdf:  (data) => api.post('/export/pdf', data),
     txt:  (data) => api.post('/export/txt', data),
-  },
-
-  // ── Settings ────────────────────────────────────────────────────────────
-  settings: {
-    get:       ()     => api.get('/settings'),
-    update:    (data) => api.put('/settings', data),
-    saveKey:   (data) => api.post('/settings/keys', data),
-    ollamaStatus: () => api.get('/settings/ollama'),
+    zip:  (data) => api.post('/export/zip', data),
   },
 };
 
-// Make available globally in the browser
 window.api = api;
