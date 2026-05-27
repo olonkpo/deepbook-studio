@@ -6,10 +6,9 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write  # Required to create GitHub Releases and upload assets
+  contents: write
 
 jobs:
-  # ── macOS .dmg ─────────────────────────────────────────────────────────────
   build-mac:
     name: Build macOS (.dmg)
     runs-on: macos-latest
@@ -33,7 +32,6 @@ jobs:
         run: npm run build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # No code-signing for v1.0.0 — add CSC_LINK and CSC_KEY_PASSWORD here later
 
       - name: Upload .dmg to Release
         uses: softprops/action-gh-release@v2
@@ -42,7 +40,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Windows .exe ────────────────────────────────────────────────────────────
   build-windows:
     name: Build Windows (.exe)
     runs-on: windows-latest
