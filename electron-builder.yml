@@ -14,6 +14,18 @@ files:
   - "!**/test/**/*"
   - "!**/tests/**/*"
   - "!**/*.test.js"
+  - "!node_modules/electron/**/*"
+  - "!node_modules/electron-builder/**/*"
+  - "!node_modules/@electron/rebuild/**/*"
+  - "!node_modules/eslint/**/*"
+  - "!node_modules/prettier/**/*"
+  - "!node_modules/concurrently/**/*"
+  - "!node_modules/electron-reload/**/*"
+  - "!backend/node_modules/nodemon/**/*"
+
+# Unpack the native better-sqlite3 binary so it can load at runtime
+asarUnpack:
+  - "backend/node_modules/better-sqlite3/build/**/*"
 
 directories:
   output: dist
