@@ -1,11 +1,12 @@
 /**
- * electron/main.js
- * Electron main process — creates the app window and spawns the backend server.
- */
+* electron/main.js
+* Electron main process — creates the app window and spawns the backend server.
+*/
 
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const http = require('http');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -44,8 +45,6 @@ function startBackend() {
 // ── Wait for backend to be ready, then open the window ───────────────────────
 function waitForBackend(retries = 20, delay = 500) {
   return new Promise((resolve, reject) => {
-    const http = require('http');
-
     function attempt(remaining) {
       http.get(`http://localhost:${BACKEND_PORT}/api/health`, res => {
         if (res.statusCode === 200) {
@@ -79,9 +78,9 @@ function createWindow() {
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,   // Security: isolate renderer from Node.js
-      nodeIntegration: false,   // Security: no Node.js in renderer
-      sandbox: false,           // Needed for preload to work correctly
+      contextIsolation: true, // Security: isolate renderer from Node.js
+      nodeIntegration: false, // Security: no Node.js in renderer
+      sandbox: true, // Safe with contextIsolation: true (Electron 20+)
     },
   });
 
