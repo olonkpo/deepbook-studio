@@ -7,6 +7,15 @@ const { Menu, app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
 const path = require('path');
 
 function buildMenu() {
+  // Prevent double-registration errors (e.g. during hot-reload)
+  ipcMain.removeHandler('app:getVersion');
+  ipcMain.removeHandler('dialog:showSave');
+  ipcMain.removeHandler('dialog:showOpen');
+  ipcMain.removeHandler('shell:openPath');
+  ipcMain.removeAllListeners('window:minimize');
+  ipcMain.removeAllListeners('window:maximize');
+  ipcMain.removeAllListeners('window:close');
+
   // ── IPC handlers for preload-exposed functions ──────────────────────────
   ipcMain.handle('app:getVersion', () => app.getVersion());
 
@@ -126,7 +135,7 @@ function buildMenu() {
       submenu: [
         {
           label: 'DeepBook Studio Documentation',
-          click: () => shell.openExternal('https://github.com/<your-username>/deepbook-studio'),
+          click: () => shell.openExternal('https://github.com/olonkpo/deepbook-studio'),
         },
         { type: 'separator' },
         {
